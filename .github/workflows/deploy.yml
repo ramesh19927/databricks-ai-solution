@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      GAR_LOCATION: ${{ secrets.GAR_LOCATION || 'us' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker "${GAR_LOCATION}-docker.pkg.dev"
+
+      - name: Build backend image
+        run: |
+          docker build -t "${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/triage-backend/backend:${GITHUB_SHA}" -f backend/Dockerfile .
+          docker push "${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/triage-backend/backend:${GITHUB_SHA}"
+      - name: Build frontend image
+        run: |
+          docker build -t "${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/triage-frontend/frontend:${GITHUB_SHA}" frontend
+          docker push "${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/triage-frontend/frontend:${GITHUB_SHA}"
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init
+      - name: Terraform apply
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.GCP_REGION }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_backend_image_tag: "backend:${GITHUB_SHA}"
+          TF_VAR_frontend_image_tag: "frontend:${GITHUB_SHA}"
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        run: terraform apply -auto-approve
