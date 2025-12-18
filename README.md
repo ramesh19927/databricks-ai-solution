@@ -3,6 +3,7 @@
 AI-powered workflow for ingesting customer materials, running retrieval-augmented analysis, and generating Statements of Work (SoW). The stack matches the reference triage system with FastAPI, React (Vite), PostgreSQL + pgvector, JWT auth, OpenAI, Databricks ingestion, and GCP deployment via Terraform.
 
 ## Contents
+- [Quickstart (Explain Like I'm 5)](#quickstart-explain-like-im-5)
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Environment](#environment)
@@ -12,6 +13,45 @@ AI-powered workflow for ingesting customer materials, running retrieval-augmente
 - [CI/CD](#cicd)
 - [Terraform Deploy](#terraform-deploy)
 - [Troubleshooting](#troubleshooting)
+
+## Quickstart (Explain Like I'm 5)
+If you just want the app running on your laptop fast, follow these baby steps:
+1) **Install the basics** (once):
+   - Docker Desktop (keep it running)
+   - Python 3.11 (with `pip`)
+   - Node.js 20 (includes `npm`)
+   - Git (to download the code)
+
+2) **Get the code**:
+```bash
+git clone <repo-url>
+cd databricks-ai-solution
+```
+
+3) **Add your secrets**:
+```bash
+cp .env.example .env
+# Open .env and fill at least:
+# OPENAI_API_KEY=<your key>
+# JWT_SECRET_KEY=<any long random string>
+```
+Leave the Databricks values empty unless you need that mode.
+
+4) **Start everything with one command** (database, backend, frontend):
+```bash
+docker-compose up --build
+```
+Wait until you see the backend say it is running.
+
+5) **Check it works**:
+- Open the UI: http://localhost:4173
+- API health: `curl http://localhost:8000/health` should return `{"status":"ok"}`.
+
+6) **Stop later**:
+```bash
+docker-compose down
+```
+Data stays in the Docker volume (`pgdata`) so you can start again later.
 
 ## Architecture
 - **Backend (FastAPI)**: `/backend/app` with JWT auth, document ingestion, RAG search, and SoW generation. Alembic migrations live in `/backend/alembic`.
